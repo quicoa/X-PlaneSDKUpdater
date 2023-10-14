@@ -1,0 +1,49 @@
+name: Update SDK
+
+on:
+  schedule:
+    - cron: '30 0 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    name: Check for update
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Get URL
+        run: bash .github/get_url.sh > tmp
+      - name: Check for updates
+        run: |
+          head -n1 tmp > url
+          tail -n1 tmp > tag
+          git --no-pager show --format=%s --no-patch > commit
+          diff -i -w tag commit
+
+  fetch:
+    name: Fetch new update
+    runs-on: ubuntu-latest
+    needs: check
+    if: ${{ failure() }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Get URL
+        run: bash .github/get_url.sh > ~/url
+      - name: Fetch new zip
+        run: wget -O ~/file $(head -n1 ~/url)
+      - name: Remove repository files
+        run: rm -rf *
+      - name: Extract new files
+        run: unzip ~/file
+      - name: Check-in new files
+        run: git add .
+      - name: Commit update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m $(tail -n1 ~/url)
+          git push
