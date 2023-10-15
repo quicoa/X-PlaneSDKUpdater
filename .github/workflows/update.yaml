@@ -48,6 +48,10 @@ jobs:
         run: rm -rf *
       - name: Extract new files
         run: unzip ~/file
+      - name: Adjust file locations
+        run: |
+          mv SDK/* .
+          rmdir SDK
       - name: Check-in new files
         run: git add .
       - name: Commit update
