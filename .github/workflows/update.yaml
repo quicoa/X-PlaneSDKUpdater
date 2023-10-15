@@ -12,23 +12,31 @@ jobs:
   check:
     name: Check for update
     runs-on: ubuntu-latest
+    outputs:
+      update: ${{ steps.output.outputs.update }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Get URL
         run: bash .github/get_url.sh > tmp
       - name: Check for updates
+        id: check
+        continue-on-error: true
         run: |
           head -n1 tmp > url
           tail -n1 tmp > tag
           git --no-pager show --format=%s --no-patch > commit
           diff -i -w tag commit
+      - name: Set result in output variable
+        id: output
+        if: steps.check.outcome != 'success'
+        run: echo "update=1" >> "$GITHUB_OUTPUT"
 
   fetch:
     name: Fetch new update
     runs-on: ubuntu-latest
     needs: check
-    if: ${{ failure() }}
+    if: ${{ needs.check.outputs.update > 0 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
